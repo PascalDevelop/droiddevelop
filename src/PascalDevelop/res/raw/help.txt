@@ -1,3 +1,26 @@
-PascalDevelop
+PascalDevelop: A simplistic IDE for FreePascal.
+Enhanced by JF Possibilities, Inc.
 
-This is simple IDE for FreePascal.
+
+Basic instructions:
+===================
+
+1. Use the "open" button to open an existing Pascal source file or createa new skeleton console app.
+
+2. Use the "compile" button to compile the current file. This may take some time. In the end you will get a "res" window showing the results of the compilation. Your program has not been run yet. Use your devices "back" button to close the window.
+
+3. Poke the "run" button to execute your program. If the unit has the "pd_console" unit in its uses clause (should be the 1st) it will open a "console" window. The output of your program will be shown as it happens. If the program is expecting input use the provided input box and use the "send" button like you'd use the [enter] key. Press your devices "back" button when done.
+
+
+What's included:
+================
+FreePascal (FPC) v3.0rc2
+Many units... 
+to be listed...
+
+Language information can be found at:
+
+http://www.freepascal.org/
+http://wiki.freepascal.org/
+
+It uses a Delphi compatible syntax so texts discussing non-visual Delphi programming are applicable. FreePascal can also emulate other Pascal dialects see the FPC user's guide for the {$mode ...} directive. The default is {$mode objfpc} the most advanced of all.

@@ -35,27 +35,33 @@ public class MainActivity extends IDEActivity
 {
   private CommonEditor editor;
   private BaseProject project;
-  
+  private ProcessBuilder fpc;
+
   private Boolean needAds()
   {
      return true;
   }
-  
+
   @Override
   public void onCreate(Bundle savedInstanceState)
   {
     try
     {
       super.onCreate(savedInstanceState);
-      tv = new Memo(this, R.styleable.View);  
+      tv = new Memo(this, R.styleable.View);
       setContentView(R.layout.main);
       if (needAds())
          addAds("a1508ff456df5d1");
       ViewGroup scr = (ViewGroup)findViewById(R.id.vwEdit);
-      Memo.highLight = true;          
+      Memo.highLight = true;
       editor = new CommonEditor(this, tv, scr, recentFiles);
       project = new BaseProject(this, prefs, recentFiles, editor);
-      project.settings.initFirst(false, 12, false);      
+      project.settings.initFirst(false, 12, false);
+      // *NOTE* if this is chaged the indexes in doRunFPC must be updated!
+      fpc = new ProcessBuilder(getDir("files", 1).getPath()+"/ppcarm", "-l",
+        "-vi", "-Mobjfpc", "-CX", "-XXs", "-Fl/system/lib", "-Fu"+unitsPath(),
+        "-o", "{src}");
+      fpc.redirectErrorStream(true);
       initRes();
       if (processIntent())
         finish();
@@ -65,7 +71,7 @@ public class MainActivity extends IDEActivity
        new MessageBox(this, null).ShowEmpty(e.getMessage());
     }
   }
-  
+
   public Boolean processIntent()
   {
     Intent I = getIntent();
@@ -76,41 +82,40 @@ public class MainActivity extends IDEActivity
     {
        String file = I.getStringExtra("android.intent.extra.srcFile");
        String resFile = I.getStringExtra("android.intent.extra.resFile");
-       String params = file + " -Mdelphi -vi -XX -Fu" + unitsPath() + " -o" + resFile;
-       String res = doRunFPC(params);
-       I.setData(Uri.parse(res)); 
+       String res = doRunFPC(file, resFile);
+       I.setData(Uri.parse(res));
        setResult(RESULT_OK, I);
        return true;
     }
     return false;
   }
-   
-  @Override 
+
+  @Override
   protected CommonEditor peekEditor()
-  {  
+  {
     return editor;
   }
-  
+
   @Override
   protected BaseProject peekProject()
   {
     return project;
   }
-  
+
   private  AdView adView;
-	
+
   private void addAds(String pubId)
   {
        ViewGroup g = (ViewGroup)findViewById(R.id.vwAds);
        adView = Ads.addAds(this, g, pubId);
   }
-  
-   public void onDestroy() 
-	{ 
-		adView.stopLoading(); 
-		super.onDestroy(); 
-	} 
-  
+
+   public void onDestroy()
+	{
+		adView.stopLoading();
+		super.onDestroy();
+	}
+
   private void initRes()
   {
      ResUtils.resIcon = R.drawable.assoft;
@@ -118,9 +123,9 @@ public class MainActivity extends IDEActivity
      //ResUtils.resAndroidManifest = R.raw.androidmanifest;
      //ResUtils.resBuildApk = R.raw.buildapk;
      //ResUtils.resMain = R.raw.main;
-     //ResUtils.resMainActivity = R.raw.mainactivity;     
+     //ResUtils.resMainActivity = R.raw.mainactivity;
   }
-  
+
   public String stProgramName()
   {
      return "PascalDevelop";
@@ -131,32 +136,33 @@ public class MainActivity extends IDEActivity
   {
         String fileName = "";
         if (msg.input != null)
-           fileName = msg.input.getText().toString();  
+           fileName = msg.input.getText().toString();
         if (which == DialogInterface.BUTTON_POSITIVE)
-        {                              
+        {
           if (intParam == EditorActions.chooseFileForOpenAct)
             editor.openFile(fileName);
         }
         else if (which == DialogInterface.BUTTON_NEUTRAL)
           FileUtils.chooseFileForOpen(msg.parent, intParam, fileName);
   }
-  
+
   private File copyExecutable(String Name, int resId)
   {
      File res = getDir("files", 1);//getExternalFilesDir(null);
      File destFile = new File(res, Name);
      if (destFile.exists())
-        return destFile;   
+        return destFile;
      FileUtils.copyFileFromRaw(this, resId, destFile);
      destFile.setExecutable(true, false);
-     return destFile;     
+     return destFile;
   }
-  
+
   private void copyUnits()
   {
     try {
-    String destPath = unitsPath(); 
+    String destPath = unitsPath();
     InputStream source = getResources().openRawResource(R.raw.units);
+
     ZipInputStream zis = new ZipInputStream(source);
     try
     {
@@ -164,61 +170,64 @@ public class MainActivity extends IDEActivity
       new File(destPath).mkdirs();
       while ((ze = zis.getNextEntry()) != null)
       {
-         String filename = ze.getName(); 
+         String filename = ze.getName();
          File resFile = new File(destPath, filename);
          if (resFile.exists())
          {
            continue;
          }
-         ByteArrayOutputStream baos = new ByteArrayOutputStream(); 
-         byte[] buffer = new byte[1024]; 
-         int count; 
-         while ((count = zis.read(buffer)) != -1) 
+         ByteArrayOutputStream baos = new ByteArrayOutputStream();
+         byte[] buffer = new byte[1024];
+         int count;
+         while ((count = zis.read(buffer)) != -1)
          {
-            baos.write(buffer, 0, count); 
-         }        
+            baos.write(buffer, 0, count);
+         }
          byte[] bytes = baos.toByteArray();
          OutputStream out = new BufferedOutputStream(new FileOutputStream(resFile));
          out.write(bytes);
-         out.close();         
-      }     
+         out.close();
+      }
     }
-    finally { zis.close(); }   
+    finally { zis.close(); }
     }
     catch (Exception e) {
     }
   }
-   
+
   private File copyFPC()
   {
      copyUnits();
      copyExecutable("as", R.raw.as);
      copyExecutable("ld", R.raw.ld);
      //copyExecutable("libc.a");
-     return copyExecutable("ppcarm", R.raw.ppcarm);     
+     return copyExecutable("ppcarm", R.raw.ppcarm);
   }
-  
-  private String doRunFPC(String params)
+
+  private String doRunFPC(String source, String output)
   {
-    try 
+    try
     {
         File file = copyFPC();
-        Process p = Runtime.getRuntime().exec(file.getPath() + " " + params);
+        fpc.command().set(8, "-o"+output);
+        fpc.command().set(9, source);
+        /* TODO: set working folder? */
+        Process p = fpc.start();
         InputStream resStrm = p.getInputStream();
         p.waitFor();
         return readText(resStrm);
      }
      catch (Exception e) {
        return "error\n" + e.getMessage();
-     }       
+     }
   }
-  
-  private void runFPC(String params)
+
+  private void runFPC(String source, String output)
   {
-      String s = doRunFPC(params);
+      String s = doRunFPC(source, output);
       showText(s);
   }
-  
+
   private String readText(InputStream resStrm)
   {
      String text = "";
@@ -228,7 +237,7 @@ public class MainActivity extends IDEActivity
           final byte[] bytes = new byte[resStrm.available()];
            resStrm.read(bytes);
            text = new String(bytes);
-        
+
            text = "res:\n" + text;
         }
         catch (Exception e) {
@@ -237,23 +246,23 @@ public class MainActivity extends IDEActivity
       }
       return text;
   }
-  
+
   private void showText(String s)
   {
-     Dialogs.showText(this, s, "res", false);  
+     Dialogs.showText(this, s, "res", false);
   }
-  
+
   private String unitsPath()
   {
     return FileUtils.AssoftRoot() + "PascalDevelop/units/";
   }
-  
+
   private void runCompile(String file, int action)
   {
      String resFile = getDir("files", 1).getPath() + "/pasApp";
-     runFPC(file + " -Mdelphi -vi -XX -Fu" + unitsPath() + " -o" + resFile);
+     runFPC(file, resFile);
   }
-  
+
   private void doCompile()
   {
       editor.taskAskToSave(new Task()
@@ -262,9 +271,9 @@ public class MainActivity extends IDEActivity
                                 {
                                    runCompile(editor.currentEditFile, EditorActions.compileScriptAct);
                                 }
-                             }); 
+                             });
   }
-  
+
   public void OnClickBtnCompile (final View view)
   {
      if (!(FileUtils.fileExists(editor.currentEditFile)))
@@ -280,16 +289,16 @@ public class MainActivity extends IDEActivity
      */
      doCompile();
   }
-  
+
   private void testApp(String file)
   {
      new PascalAppExecuter(this, file, needAds());
   }
-  
+
   private void runProgram(String file)
   {
     String s = "";
-    try 
+    try
     {
         File f = new File(file);
         f.setExecutable(true, false);
@@ -298,9 +307,9 @@ public class MainActivity extends IDEActivity
      catch (Exception e) {
        s = "error\n" + e.getMessage();
        showText(s);
-     }       
+     }
   }
-  
+
   public void OnClickBtnRun (final View view)
   {
      String s = getDir("files", 1).getPath() + "/pasApp";
@@ -310,7 +319,7 @@ public class MainActivity extends IDEActivity
         new MessageBox(this, null).ShowEmpty("Please compile at first");
         //chooseAndOpenFile(EditorActions.runProgramAct);
   }
-  
+
   public void OnClickBtnOthers (final View view)
   {
      try
@@ -328,21 +337,21 @@ public class MainActivity extends IDEActivity
    	            editor.gotoLine();
    	         else if (which == 2)
    	            editor.showCharCode();
-           }    
+           }
         }.choose("Other actions", arr);
       }
-      catch  (Exception e) 
+      catch  (Exception e)
       {
          new MessageBox(this, null).ShowEmpty("Unknown error 1");
       }
   }
-  
+
   public void OnClickBtnRefact(final View view)
   {
      new MessageBox(this, null).ShowEmpty("Not available in current version");
-     //refactPlugins.showDlg();  
+     //refactPlugins.showDlg();
   }
-    
+
   @Override
   protected void onActivityResult(int requestCode, int resultCode, Intent intent)
   {
@@ -358,13 +367,13 @@ public class MainActivity extends IDEActivity
         new MessageBox(this, null).ShowEmpty(e.getMessage());
      }
   }
- 
+
   public boolean onCreateOptionsMenu (Menu menu)
   {
     getMenuInflater().inflate(R.menu.mainmenu, menu);
     return super.onCreateOptionsMenu(menu);
   }
-  
+
   @Override
    public void newFile()
   {
@@ -383,11 +392,11 @@ public class MainActivity extends IDEActivity
                                 {
                                     finish();
                                 }
-                             }); 
+                             });
         return true;
         /*
       case R.id.opn_prj_new:
-        newPrjPlugins.showDlg();  
+        newPrjPlugins.showDlg();
         //new PrjDialog(this, project).show();
         return true;
       case R.id.opn_prj:
@@ -396,17 +405,17 @@ public class MainActivity extends IDEActivity
         */
       case R.id.opt_infos:
         About.showInfo (this);
-        return true;      
+        return true;
       case R.id.opt_prj_opt:
         project.prjOptionsDlg();
-        return true;  
-        /*  
+        return true;
+        /*
       case R.id.prj_plugins:
-        pluginsManager.showDlg();  
+        pluginsManager.showDlg();
         return true;
         */
       default:
         return super.onOptionsItemSelected(item);
     }
-  } 
-} 
+  }
+}

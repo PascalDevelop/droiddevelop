@@ -15,12 +15,14 @@ public class PascalAppExecuter
    private Activity parent;
    private Boolean needAds;
    private Boolean appChoosen;
-   
+
    public PascalAppExecuter(Activity aParent, String aFile, Boolean aNeedAds)
    {
       try
       {
-        process = Runtime.getRuntime().exec(aFile);
+        ProcessBuilder pb = new ProcessBuilder(aFile);
+        pb.redirectErrorStream(true);
+        process = pb.start();
       }
       catch (Exception e) {
       }
@@ -28,13 +30,13 @@ public class PascalAppExecuter
       os = process.getOutputStream();
       parent = aParent;
       needAds = aNeedAds;
-      doProcessAsync();     
+      doProcessAsync();
    }
-   
+
   private void doProcessAsync()
   {
     new AsyncTask< PascalAppExecuter , PascalAppExecuter , Integer> ()
-    { 
+    {
        @Override
        protected Integer doInBackground( PascalAppExecuter ... params)
        {
@@ -44,43 +46,43 @@ public class PascalAppExecuter
              try {
                 get(100, TimeUnit.MILLISECONDS);
              } catch(Exception e){};
-            publishProgress(params[0]);       
+            publishProgress(params[0]);
           }
        }
        @Override
-       protected void onProgressUpdate( PascalAppExecuter ... values) 
+       protected void onProgressUpdate( PascalAppExecuter ... values)
        {
-          values[0].readAgain();   
+          values[0].readAgain();
        }
      }.execute(this);
   }
-  
+
   public Boolean chooseApp()
-  { 
+  {
       byte[] bytes;
-      try 
+      try
       {
          if (is.available() < 7)
-            return true;      
+            return true;
          bytes = new byte[7];
          is.read(bytes);
-      } 
-      catch (Exception e) 
+      }
+      catch (Exception e)
       {
          return true;
-      }   
+      }
       if (new String(bytes).compareTo("console") == 0)
       {
         app = new ConsoleAppView(parent, is, os, needAds);
         appChoosen = true;
-      } 
+      }
       return true;
   }
-  
+
   public Boolean readAgain()
-  {   
+  {
     //if (cp == null)
-    //  cp = new ConsoleProxy(fileName);  
+    //  cp = new ConsoleProxy(fileName);
        if (!appChoosen)
          return chooseApp();
        try {
@@ -92,5 +94,5 @@ public class PascalAppExecuter
          return false;
        }
   }
-   
+
 }

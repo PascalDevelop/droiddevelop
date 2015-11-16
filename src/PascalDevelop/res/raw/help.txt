@@ -1,3 +1,42 @@
-PascalDevelop
+PascalDevelop: A simplistic IDE for FreePascal.
+Enhanced by JF Possibilities, Inc.
 
-This is simple IDE for FreePascal.
+
+Basic instructions:
+===================
+
+1. Use the "open" button to open an existing Pascal source file or create a new skeleton console app.
+
+2. Use the "compile" button to compile the current file. This may take some time. In the end you will get a "res" window showing the results of the compilation. Your program has not been run yet. After checking for compile errors use your devices "back" button to close the window.
+
+3. Poke the "run" button to execute your program. If the program has the "pd_console" unit in its uses clause (must be the 1st) it will open a "console" window. The output of your program will be shown as it happens. If the program is expecting input use the provided input box and "send" button like you'd use the [enter] key. Press your devices "back" button when done to close the window.
+
+*NOTE* Currently this will not work on Android 5 (Lollipop) or newer.
+
+
+What's included:
+================
+FreePascal (FPC) v3.0rc2
+Many units are included. The highlights are:
+
+ * Most of the RTL
+ * Most of the FCL
+ * JSON
+ * XML
+ * SQLite interface and DB objects.
+ * Dbase DB objects.
+ * Images
+ * JNI interface
+ * Android Native interfaces.
+ * Some networking.
+ 
+For a full list of included units check the "assoft/PascalDevelop/units" folder in your main storage. The exact location will vary from vendor to vendor.
+
+*NOTE* Units have not been comprehensivley tested. If they compiled they were included. Simple tests were performed with the SQLite DB components. In many cases portions of the standard FreePascal packages didn't compile because Android does not provide the complete unix style libraries.
+
+Language information can be found at:
+
+http://www.freepascal.org/
+http://wiki.freepascal.org/
+
+FreePascal uses a Delphi compatible syntax so texts discussing non-visual Delphi programming are applicable. FreePascal can also emulate other Pascal dialects see the FPC user's guide for the {$mode ...} directive (PDF manuals can be downloaded from the FPC website). The default is {$mode objfpc} the most advanced of all.
